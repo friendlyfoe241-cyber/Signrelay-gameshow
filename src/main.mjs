@@ -3,7 +3,7 @@ import { csv, initial, leaderboard, MAX_ROUNDS, player, ROUND_MS, score, streaks
 import { icon } from './icons.mjs';
 import { checkOffline } from './offline.mjs';
 import { SIGNS, signIds, signById } from './signs.mjs';
-import { Audio, confetti, Wheel } from './spectacle.mjs';
+import { Audio, confetti, reducedMotion, setMotionPref, Wheel } from './spectacle.mjs';
 import { openStore } from './store.mjs';
 import { $, escapeHtml, renderBoard, renderHost, renderPeople, renderStage, setupIcons, threshold } from './view.mjs';
 
@@ -30,6 +30,7 @@ let recoveryKey;
 let recoveryInProgress = false;
 const logs = [];
 
+setMotionPref(() => state.settings?.motion);
 const audio = new Audio(() => state.settings);
 const wheel = new Wheel($('wheel'), SIGNS, audio);
 const camera = new Camera($('camera'), $('overlay'), cameraEvent, () => state.settings);
@@ -69,6 +70,7 @@ function render() {
   const p = active();
   const stage = kind(p);
   const before = document.body.dataset.stage;
+  document.body.dataset.motion = state.settings.motion;
   const ui = { spinning: !!spin, starting, problem, operator, result: resultView?.result, devices };
   renderStage(stage, p, state, ui);
   const heading = $('wheel-copy').querySelector('h1');
@@ -272,7 +274,7 @@ async function settle(method, run) {
   const correct = successful(result);
   if (correct) {
     const scoreText = $('player-card').querySelector('.board-score');
-    if (scoreText && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (scoreText && !reducedMotion()) {
       const began = performance.now();
       const grow = now => {
         if (!scoreText.isConnected) return;

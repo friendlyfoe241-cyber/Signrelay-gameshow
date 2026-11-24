@@ -11,6 +11,22 @@
 
 When replacing an earlier kiosk, export a JSON backup first. Stop the old server, start the new package on port 8787, and open the same address in the same Chrome profile with access to the local server. If Diagnostics shows the earlier build, reload once, let the update download, close every GameShow tab, and wait a few seconds before reopening the address. Check for build **f7f9531a61d13c30** next to **Offline Ready**. Leave browser site data intact so scores remain available.
 
+## Motion and tracking
+
+Host controls offer two switches that matter on a kiosk:
+
+- **Animations · Full** (default) runs the wheel spin, confetti and stage transitions even when the
+  operating system reports reduced motion. The booth show is the product; the previous behaviour
+  collapsed the spin to 230 ms on such machines, which read as "the wheel skipped".
+- **Animations · Follow system reduced-motion** restores that accessibility behaviour for anyone who
+  wants it. The status is also on `<body data-motion>`, so CSS effects follow the same switch.
+
+Hand-tracking speed: the landmarkers now pick GPU or CPU by benchmarking both at startup (software
+WebGL renderers are skipped), so a machine with working GPU acceleration runs the overlay several
+times faster; Host diagnostics shows which delegate was chosen next to **Model**. The overlay itself
+is redrawn at display rate and eased towards the latest detection, so the skeleton glides instead of
+stepping at the analysis rate.
+
 ## Run the game
 
 1. Select **Join the game** or **Switch player**. Add a nickname or search by name or player ID. Share the numeric ID with participants who use the same nickname.

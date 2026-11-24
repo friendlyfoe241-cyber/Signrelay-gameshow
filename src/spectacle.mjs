@@ -1,5 +1,13 @@
 const tau = Math.PI * 2;
-const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Motion honours the host's Animations setting. "system" follows the OS reduce-motion preference, which
+// is what collapsed the wheel spin to 230 ms and silenced every other effect on a kiosk with that
+// accessibility switch on; "full" runs the show regardless, because the spin is the product here.
+let motionPref = () => 'system';
+export function setMotionPref(getter) { motionPref = getter; }
+export function reducedMotion() {
+  return motionPref() === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 const palette = ['#3e865c','#255c41','#34754f','#276247','#3e8058','#265b40','#347c53','#235b41','#3b845b','#286347'];
 const tones = {
   tick: [[610, 0, .026, .16, 'triangle']], spin: [[142, 0, .23, .12, 'sine'], [205, .095, .2, .11, 'sine']],
@@ -121,7 +129,7 @@ export class Wheel {
   }
   idle() {
     this.stop();
-    if (reduced()) return;
+    if (reducedMotion()) return;
     const start = performance.now();
     const base = this.angle;
     const tick = now => {
@@ -138,11 +146,11 @@ export class Wheel {
   spin(sign) {
     this.stop();
     const index = this.signs.findIndex(s => s.id === sign);
-    const duration = reduced() ? 230 : 3450;
+    const duration = reducedMotion() ? 230 : 3450;
     const start = performance.now();
     const base = this.angle;
     const target = -index * this.step;
-    const delta = ((target - base) % tau + tau) % tau + (reduced() ? 0 : 4 * tau);
+    const delta = ((target - base) % tau + tau) % tau + (reducedMotion() ? 0 : 4 * tau);
     let previous = Math.floor((base + this.step / 2) / this.step);
     this.audio.play('spin');
     return new Promise(done => {
@@ -172,7 +180,7 @@ export class Wheel {
 
 let party;
 export function confetti(canvas, level) {
-  if (reduced()) return;
+  if (reducedMotion()) return;
   cancelAnimationFrame(party);
   const context = canvas.getContext('2d');
   const width = innerWidth;

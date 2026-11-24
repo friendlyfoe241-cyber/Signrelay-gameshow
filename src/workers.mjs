@@ -42,7 +42,8 @@ export class WorkerClient {
 export function startWorkers() {
   const tracker = new WorkerClient('./tracker.js');
   const classifier = new WorkerClient('./classifier.mjs', { type: 'module' });
-  const ready = Promise.all([tracker.request('init'), classifier.request('init')]);
+  const ready = Promise.all([tracker.request('init'), classifier.request('init')]).then(([reply]) =>
+    ({ delegate: reply?.delegate }));
   return { tracker, classifier, ready, close() { tracker.close(); classifier.close(); } };
 }
 

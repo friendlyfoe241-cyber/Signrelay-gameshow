@@ -2,7 +2,7 @@ export const MAX_ROUNDS = 5;
 export const ROUND_MS = 20_000;
 export const POINTS = 10;
 export const MODES = Object.freeze({ relaxed: 0.60, standard: 0.69, strict: 0.79 });
-export const DEFAULTS = Object.freeze({ mode: 'relaxed', custom: 0.60, volume: 0.48, muted: false, overlay: true, camera: '', manual: false });
+export const DEFAULTS = Object.freeze({ mode: 'relaxed', custom: 0.60, volume: 0.48, muted: false, overlay: true, camera: '', manual: false, motion: 'full' });
 export const initial = () => ({ version: 1, revision: 0, nextNumber: 1, activeId: null, settings: { ...DEFAULTS }, people: [] });
 export const cleanName = s => String(s ?? '').trim().replace(/\s+/gu, ' ').slice(0, 36);
 export const player = state => state.people.find(p => p.id === state.activeId);
@@ -38,6 +38,7 @@ export function validateSettings(input) {
     if (Number.isFinite(input.volume)) settings.volume = Math.min(1, Math.max(0, input.volume));
     if (typeof input.camera === 'string') settings.camera = input.camera.slice(0, 512);
     for (const key of ['overlay', 'muted', 'manual']) if (typeof input[key] === 'boolean') settings[key] = input[key];
+    if (input.motion === 'full' || input.motion === 'system') settings.motion = input.motion;
   }
   return settings;
 }

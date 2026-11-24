@@ -1,6 +1,7 @@
 import { leaderboard, MAX_ROUNDS, MODES, player, score, streaks, successful } from './game.mjs';
 import { signById } from './signs.mjs';
 import { icon } from './icons.mjs';
+import { reducedMotion } from './spectacle.mjs';
 
 export const $ = name => document.getElementById(name);
 export const escapeHtml = value => String(value).replace(/[&<>"']/g, character =>
@@ -32,7 +33,7 @@ export function renderBoard(state) {
     list.innerHTML = rows.length ? rows.map(p => podium(state.activeId, p)).join('') :
       '<li class="board-empty">Scores appear when players join.</li>';
     list.scrollTop = scroll;
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!reducedMotion()) {
       [...list.querySelectorAll('[data-row]')].slice(0, 50).forEach(row => {
         const previousTop = previous.get(row.dataset.row);
         if (previousTop !== undefined && previousTop !== row.offsetTop) row.animate(
@@ -159,6 +160,7 @@ export function renderHost(state, ui) {
   $('volume').value = Math.round(settings.volume * 100);
   $('volume-value').textContent = $('volume').value + '%';
   $('overlay-setting').checked = settings.overlay;
+  $('motion').value = settings.motion;
   $('manual').checked = settings.manual;
   $('camera-select').innerHTML = '<option value="">Default camera</option>' + ui.devices.map((d, i) =>
     '<option value="' + escapeHtml(d.deviceId) + '">' + escapeHtml(d.label || 'Camera ' + (i + 1)) + '</option>').join('');

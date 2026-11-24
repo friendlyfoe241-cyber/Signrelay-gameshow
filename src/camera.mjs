@@ -51,10 +51,10 @@ export class Camera {
     try {
       this.workers = startWorkers();
       const current = this.workers;
-      current.ready.then(() => {
+      current.ready.then(({ delegate } = {}) => {
         if (this.workers !== current) return;
-        this.model = 'Ready';
-        this.notify('model', 'Hand, pose and ASL models ready');
+        this.model = 'Ready · ' + (delegate ?? 'CPU');
+        this.notify('model', 'Hand, pose and ASL models ready on ' + (delegate ?? 'CPU'));
       }, error => {
         if (this.workers !== current) return;
         current.close();
@@ -207,12 +207,36 @@ export class Camera {
     });
   }
 
+  /** The overlay used to repaint only when an analysis frame arrived, so the skeleton stepped at the
+   * analysis rate (about 15/s) while the video ran at 30 — that is the lag people see. The loop below
+   * runs at display rate and eases the skeleton towards the latest landmarks, so it glides instead of
+   * stepping; the underlying detection cadence is unchanged. */
   paintOverlay(hands) {
     this.overlayHands = hands;
-    if (this.overlayFrame !== undefined || (!hands.length && !this.overlayPainted)) return;
+    if (this.overlayFrame === undefined) this.overlayLoop();
+  }
+
+  overlayLoop() {
     this.overlayFrame = requestAnimationFrame(() => {
       this.overlayFrame = undefined;
-      this.draw(this.overlayHands);
+      const hands = this.overlayHands;
+      if (!this.settings().overlay || !hands.length) {
+        if (this.overlayPainted) this.draw([]);
+        this.smoothHands = [];
+        if (this.attempt) this.overlayLoop();
+        return;
+      }
+      if (!this.smoothHands?.length || this.smoothHands.length !== hands.length) {
+        this.smoothHands = hands.map(hand => hand.map(point => ({ ...point })));
+      } else {
+        // Ease towards the newest detection; a fresh hand snaps rather than travelling across the frame.
+        this.smoothHands = this.smoothHands.map((hand, index) => hand.map((point, slot) => {
+          const target = hands[index][slot];
+          return { x: point.x + (target.x - point.x) * .45, y: point.y + (target.y - point.y) * .45, z: target.z };
+        }));
+      }
+      this.draw(this.smoothHands);
+      if (this.attempt) this.overlayLoop();
     });
   }
 
