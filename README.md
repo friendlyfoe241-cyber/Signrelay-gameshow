@@ -1,6 +1,6 @@
 # SignRelay GameShow
 
-**Spin. Sign. Score.** A standalone webcam game for the SignRelay university exhibition on 26 November 2026. Five unique rounds per participant, 20 seconds per round, and 10 points per correct sign. Participant records live in the booth browser profile. Camera frames stay in memory.
+**Spin. Sign. Score.** A standalone webcam game for the SignRelay university exhibition on 26 November 2026. Five unique rounds per participant, 20 seconds per round, and 10 points per correct sign. Participant records live in the booth browser profile. Camera frames stay in memory..
 
 ## Run the prepared offline release
 
