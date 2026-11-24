@@ -1,3 +1,4 @@
+window.__gameBooted = true; // boot-check.js reports a dead page unless this module ran
 import { Camera } from './camera.mjs';
 import { csv, initial, leaderboard, MAX_ROUNDS, player, ROUND_MS, score, streaks, successful, timeLeft, validateBackup } from './game.mjs';
 import { icon } from './icons.mjs';

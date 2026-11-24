@@ -16,28 +16,31 @@ for (const asset of [...pins, ...lessonPins.map(item => ({ ...item, path: 'lesso
   const bytes = await readFile(resolve(root, 'public', asset.path));
   if (digest(bytes) !== asset.sha256) throw new Error('Build asset fingerprint mismatch: ' + asset.path);
 }
-await rm(out, { recursive: true, force: true });
-await mkdir(out, { recursive: true });
-await cp(resolve(root, 'public'), out, { recursive: true });
+// Build into a staging directory and swap at the end: a build that fails halfway used to leave a
+// dist without main.mjs, which renders as a styled but dead page with no error anywhere.
+const staging = out + '.staging';
+await rm(staging, { recursive: true, force: true });
+await mkdir(staging, { recursive: true });
+await cp(resolve(root, 'public'), staging, { recursive: true });
 const vision = resolve(root, 'node_modules/@mediapipe/tasks-vision');
 const ort = resolve(root, 'node_modules/onnxruntime-web/dist');
-await cp(resolve(vision, 'wasm'), resolve(out, 'vision'), {
+await cp(resolve(vision, 'wasm'), resolve(staging, 'vision'), {
   recursive: true, filter: path => !path.includes('_module_internal')
 });
-await mkdir(resolve(out, 'ort'));
+await mkdir(resolve(staging, 'ort'));
 for (const name of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) {
-  await cp(resolve(ort, name), resolve(out, 'ort', name));
+  await cp(resolve(ort, name), resolve(staging, 'ort', name));
 }
 const cfg = { absWorkingDir: root, bundle: true, minify: true, platform: 'browser', target: 'es2022', logLevel: 'warning' };
-await build({ ...cfg, entryPoints: ['src/main.mjs', 'src/classifier.mjs'], outdir: out, format: 'esm', outExtension: { '.js': '.mjs' } });
-await build({ ...cfg, entryPoints: ['src/tracker.mjs'], outfile: resolve(out, 'tracker.js'), format: 'iife' });
+await build({ ...cfg, entryPoints: ['src/main.mjs', 'src/classifier.mjs'], outdir: staging, format: 'esm', outExtension: { '.js': '.mjs' } });
+await build({ ...cfg, entryPoints: ['src/tracker.mjs'], outfile: resolve(staging, 'tracker.js'), format: 'iife' });
 if (process.argv.includes('--evaluate')) {
-  await cp(resolve(root, 'scripts/replay.html'), resolve(out, 'replay.html'));
-  await build({ ...cfg, entryPoints: ['scripts/replay-page.mjs'], outfile: resolve(out, 'replay-page.mjs'), format: 'esm' });
+  await cp(resolve(root, 'scripts/replay.html'), resolve(staging, 'replay.html'));
+  await build({ ...cfg, entryPoints: ['scripts/replay-page.mjs'], outfile: resolve(staging, 'replay-page.mjs'), format: 'esm' });
 }
 if (process.argv.includes('--stress')) {
-  await cp(resolve(root, 'scripts/stress.html'), resolve(out, 'stress.html'));
-  await build({ ...cfg, entryPoints: ['scripts/stress-page.mjs'], outfile: resolve(out, 'stress-page.mjs'), format: 'esm' });
+  await cp(resolve(root, 'scripts/stress.html'), resolve(staging, 'stress.html'));
+  await build({ ...cfg, entryPoints: ['scripts/stress-page.mjs'], outfile: resolve(staging, 'stress-page.mjs'), format: 'esm' });
 }
 async function collect(folder, prefix = '') {
   const items = [];
@@ -51,12 +54,17 @@ async function collect(folder, prefix = '') {
   }
   return items;
 }
-const assets = await collect(out);
+const assets = await collect(staging);
 const version = digest(JSON.stringify(assets)).slice(0, 16);
 const manifest = { version, assets };
 const sw = await readFile(resolve(root, 'src/sw.js'), 'utf8');
-await writeFile(resolve(out, 'sw.js'), 'const RELEASE = ' + JSON.stringify(manifest) + ';\n' + sw);
-await writeFile(resolve(out, 'runtime.json'), JSON.stringify(manifest, null, 2));
+await writeFile(resolve(staging, 'sw.js'), 'const RELEASE = ' + JSON.stringify(manifest) + ';\n' + sw);
+await writeFile(resolve(staging, 'runtime.json'), JSON.stringify(manifest, null, 2));
+// Everything succeeded: replace the served directory in one step so a visitor never sees a half-built
+// kiosk (a dist without main.mjs renders as a styled but dead page).
+await rm(out, { recursive: true, force: true });
+await cp(staging, out, { recursive: true });
+await rm(staging, { recursive: true, force: true });
 console.log('GameShow ' + version + ' · ' + assets.length + ' offline assets · ' +
   (assets.reduce((sum, asset) => sum + asset.bytes, 0) / 1e6).toFixed(1) + ' MB');
 
